@@ -1,5 +1,6 @@
 ﻿using AutoPlanning.Models;
 using System;
+using System.Linq;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
@@ -10,14 +11,83 @@ namespace TaskPlanning.Client.Sample
     {
         static async Task Main(string[] args)
         {
-            var accessKey = File.ReadAllText("AccessKey.txt");
+            Console.WriteLine("--------------------------------------");
+            Console.WriteLine("| TaskPlanning.Client.Sample Console |");
+            Console.WriteLine("--------------------------------------");
+            Console.WriteLine("");
+            Console.WriteLine("0. Regular (plan until full)");
+            Console.WriteLine("1. Options (show all availible options for a single planitem)");
+            Console.WriteLine("");
 
+            Console.Write(">");
+            var key = Console.ReadKey();
+            var mode = (PlanningMode)int.Parse(key.KeyChar.ToString());
+
+            //Create your client using your private access key
+            var accessKey = File.ReadAllText("AccessKey.txt");
             var client = TaskPlanningClient.Create(accessKey);
 
+            PlanningRequest request = GetPlanningRequest(mode);
+
+            if (mode == PlanningMode.Options)
+            {
+                //When requesting options only one planitem is alowed.
+                request.PendingPlanItems = new List<PlanItem> {
+                    request.PendingPlanItems.First()
+                };
+
+
+                //In order to retrieve a list of possibilities in an existing planning you must provide
+                //existing planned items per resource using the PrePlannedItems list
+                var employee = request.Resources.First();
+                employee.PrePlannedItems.Add(new PlanItemResult
+                {
+                    Item = new PlanItem { Duration = TimeSpan.FromHours(1), Location = HaarlemCity },
+                    Window = new Window(new DateTime(2000, 1, 1, 9, 0, 0), TimeSpan.FromHours(1))
+                });
+            }
+
+            PlanningTask planning = await client.Plan(request);
+
+            if (planning.Status == PlanningTaskStatus.Success)
+            {
+                if (mode == PlanningMode.Regular)
+                {
+                    Console.WriteLine("Planned successfully:");
+                    foreach (var planned in planning.Planning.PlannedItems)
+                    {
+                        Console.WriteLine($"{planned.Item.Id} on {planned.Window.Start}");
+                    }
+
+                    Console.WriteLine("");
+
+                    Console.WriteLine("Not planned:");
+                    foreach (var notPlanned in planning.Planning.FailedToPlanItems)
+                    {
+                        Console.WriteLine($"{notPlanned.Item.Id} ({notPlanned.FailedReasonText})");
+                    }
+                }
+                else if(mode == PlanningMode.Options)
+                {
+                    Console.WriteLine($"Possible options for {planning.Planning.PlannedItems.SingleOrDefault()?.Item.Id}");
+                    foreach (var planned in planning.Planning.PlannedItems)
+                    {
+                        Console.WriteLine($"{planned.Window.Start}");
+                    }
+                }
+            }
+            else
+            {
+                Console.WriteLine($"Whoops! something went wrong: {planning.Status}");
+                Console.WriteLine(planning.Exception.Message);
+            }
+        }
+
+        private static PlanningRequest GetPlanningRequest(PlanningMode mode)
+        {
             var request = new PlanningRequest()
             {
-                //Make a regular style planning (fill up the planning till there are no more options)
-                Mode = PlanningMode.Regular,
+                Mode = mode,
 
                 //There can be multiple resources to plan for
                 Resources = new List<Resource>
@@ -51,7 +121,7 @@ namespace TaskPlanning.Client.Sample
                 //Create planning for January (1th to 31th)
                 PlanningWindow = new Window(new DateTime(2000, 1, 1, 8, 0, 0), TimeSpan.FromDays(31)),
 
-                //These items need to be planned
+                //These items need to be planned (for Options mode only one plan item is allowed)
                 PendingPlanItems = new List<PlanItem>
                 {
                     //Something to be planned
@@ -87,30 +157,7 @@ namespace TaskPlanning.Client.Sample
                     }
                 }
             };
-
-            PlanningTask planning = await client.Plan(request);
-
-            if (planning.Status == PlanningTaskStatus.Success)
-            {
-                Console.WriteLine("Planned successfully:");
-                foreach (var planned in planning.Planning.PlannedItems)
-                {
-                    Console.WriteLine($"{planned.Item.Id} on {planned.Window.Start}");
-                }
-
-                Console.WriteLine("");
-
-                Console.WriteLine("Not planned:");
-                foreach (var notPlanned in planning.Planning.FailedToPlanItems)
-                {
-                    Console.WriteLine($"{notPlanned.Item.Id} ({notPlanned.FailedReasonText})");
-                }
-            }
-            else
-            {
-                Console.WriteLine($"Whoops! something went wrong: {planning.Status}");
-                Console.WriteLine(planning.Exception.Message);
-            }
+            return request;
         }
 
         static Location HaarlemCity { get; } = new Location()
