@@ -22,11 +22,25 @@ namespace TaskPlanning.Client.Sample
 
             Console.Write(">");
             var key = Console.ReadKey();
+            Console.WriteLine("");
+
             var mode = (PlanningMode)int.Parse(key.KeyChar.ToString());
 
             //Create your client using your private access key
-            var accessKey = File.ReadAllText("AccessKey.txt");
-            var client = TaskPlanningClient.Create(accessKey);
+            var accessKey = string.Empty;
+            if (File.Exists("AccessKey.txt"))
+                accessKey = File.ReadAllText("AccessKey.txt");
+            
+            TaskPlanningClient client;
+            try
+            {
+                client = await TaskPlanningClient.Create(accessKey);
+            }
+            catch (TaskPlanning.Client.InvalidAccessKeyException ex)
+            {
+                Console.WriteLine(ex.Message);
+                return;
+            }
 
             PlanningRequest request = GetPlanningRequest(mode);
 
