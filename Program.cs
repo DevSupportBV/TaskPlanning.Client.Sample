@@ -35,6 +35,7 @@ namespace TaskPlanning.Client.Sample
             try
             {
                 client = await TaskPlanningClient.Create(accessKey);
+                client.PlanningTaskUpdated += Client_PlanningTaskUpdated;
             }
             catch (TaskPlanning.Client.InvalidAccessKeyException ex)
             {
@@ -50,8 +51,7 @@ namespace TaskPlanning.Client.Sample
                 request.PendingPlanItems = new List<PlanItem> {
                     request.PendingPlanItems.First()
                 };
-
-
+                
                 //In order to retrieve a list of possibilities in an existing planning you must provide
                 //existing planned items per resource using the PrePlannedItems list
                 var employee = request.Resources.First();
@@ -62,7 +62,7 @@ namespace TaskPlanning.Client.Sample
                 });
             }
 
-            PlanningTask planning = await client.Plan(request);
+            PlanningTask planning = await client.Plan(request, TimeSpan.FromMilliseconds(500));
 
             if (planning.Status == PlanningTaskStatus.Success)
             {
@@ -84,7 +84,7 @@ namespace TaskPlanning.Client.Sample
                 }
                 else if(mode == PlanningMode.Options)
                 {
-                    Console.WriteLine($"Possible options for {planning.Planning.PlannedItems.SingleOrDefault()?.Item.Id}");
+                    Console.WriteLine($"Possible options for {planning.Planning.PlannedItems.FirstOrDefault()?.Item.Id}");
                     foreach (var planned in planning.Planning.PlannedItems)
                     {
                         Console.WriteLine($"{planned.Window.Start}");
@@ -96,6 +96,15 @@ namespace TaskPlanning.Client.Sample
                 Console.WriteLine($"Whoops! something went wrong: {planning.Status}");
                 Console.WriteLine(planning.Exception.Message);
             }
+        }
+
+        private static void Client_PlanningTaskUpdated(object sender, TaskPlanningUpdateEventArgs e)
+        {
+            var progressString = e.PlanningTask.Progress.ToString().PadLeft(3, ' ');
+            Console.WriteLine($"UPDATE\t Progress: {progressString}%\t Status: {e.PlanningTask.Status}");
+
+            if(e.PlanningTask.Status == PlanningTaskStatus.Error)
+                Console.WriteLine($"ERROR\t Exception:\n{e.PlanningTask.Exception}");
         }
 
         private static PlanningRequest GetPlanningRequest(PlanningMode mode)
