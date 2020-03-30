@@ -113,6 +113,10 @@ namespace TaskPlanning.Client.Sample
             {
                 Mode = mode,
 
+                //Instruct the planning api to prefer nearby resources that are planned on nearby planitems, by providing the Affinity Radius in Meters
+                //To disable this logic set it to 0.
+                ResourceAffinityRadius = 100 * 1000, // equals 100km
+
                 //There can be multiple resources to plan for
                 Resources = new List<Resource>
                 {
