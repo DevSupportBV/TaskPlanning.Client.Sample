@@ -6,7 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="TaskPlanning.Client" Version="1.0.5" />
+    <PackageReference Include="TaskPlanning.Client" Version="1.0.6" />
   </ItemGroup>
 
   <ItemGroup>

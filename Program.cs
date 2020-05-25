@@ -113,6 +113,10 @@ namespace TaskPlanning.Client.Sample
             {
                 Mode = mode,
 
+                //Set NearbyLocationTravelTimeThreshold (in minutes) to cluster planitems that are 'close by' other already planned items 
+                //AND there is still some time left to fill
+                NearbyLocationTravelTimeThreshold = 15,
+
                 //There can be multiple resources to plan for
                 Resources = new List<Resource>
                 {
